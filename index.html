@@ -69,7 +69,27 @@ function generateGrid() {
     tile.style.height = size + "px";
     tile.style.border = "1px solid #1e3a5f";
 
-    grid.appendChild(tile);
+  tile.onclick = function () {
+
+    if (mode === "unit") {
+      tile.style.background = "blue";
+    }
+
+    else if (mode === "terrain") {
+      tile.style.background = "green";
+    }
+
+    else if (mode === "structure") {
+      tile.style.background = "gray";
+    }
+
+    else if (mode === "select") {
+      tile.style.outline = "2px solid yellow";
+    }
+
+  };
+
+  grid.appendChild(tile);
   }
 }
 
