@@ -191,19 +191,26 @@ generateGrid();
 function setMode(m){ mode=m; selected=null; }
 
 function uploadUnit(e){
-  let file=e.target.files[0];
-  let url=URL.createObjectURL(file);
-  unitImages.push(url);
+  let files = e.target.files;
 
-  let img=document.createElement("img");
-  img.src=url;
-  img.onclick=()=>{
-    selectedUnit=url;
-    document.querySelectorAll("#unitLibrary img").forEach(i=>i.classList.remove("selected"));
-    img.classList.add("selected");
-  };
+  for(let i=0; i<files.length; i++){
+    let file = files[i];
+    let url = URL.createObjectURL(file);
 
-  document.getElementById("unitLibrary").appendChild(img);
+    unitImages.push(url);
+
+    let img = document.createElement("img");
+    img.src = url;
+
+    img.onclick = () => {
+      selectedUnit = url;
+      document.querySelectorAll("#unitLibrary img")
+        .forEach(i => i.classList.remove("selected"));
+      img.classList.add("selected");
+    };
+
+    document.getElementById("unitLibrary").appendChild(img);
+  }
 }
 
 function addFaction(){
