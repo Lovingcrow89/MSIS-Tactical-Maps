@@ -1,151 +1,220 @@
-<!DOCTYPE html><html>
+<!DOCTYPE html>
+<html>
 <head>
-  <title>MSIS Tactical Map v3</title>
-  <style>
-    body { background:#0b0f1a; color:white; font-family:sans-serif; display:flex; }
-    #leftPanel { margin:10px; }
-    #grid { display:grid; margin:20px; }
-    .tile {
-      width:30px; height:30px;
-      border:1px solid #1f2a44;
-      position:relative;
-    }
-    .tile:hover { background:#1a2440; }
-    .unit {
-      width:100%; height:100%;
-      background-size:cover;
-      cursor:pointer;
-    }
-    .highlight { background:rgba(0,255,255,0.2); }
-    #infoPanel {
-      margin-top:20px;
-      padding:10px;
-      border:1px solid #1f2a44;
-      width:200px;
-    }
-  </style>
+<title>MSIS Tactical Maps</title>
+<style>
+body { background:#0b0f1a; color:white; font-family:sans-serif; display:flex; }
+#leftPanel { width:220px; padding:10px; }
+#grid { display:grid; margin:10px; }
+.tile {
+  width:32px; height:32px;
+  border:1px solid #1f2a44;
+  position:relative;
+}
+.tile:hover { background:#1a2440; }
+
+.unit, .structure, .terrain {
+  width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px;
+  cursor:pointer;
+}
+
+.selected { outline:2px solid white; }
+
+button {
+  width:100%; margin:2px 0;
+  background:#1f2a44; color:white;
+  border:none; padding:6px;
+  cursor:pointer;
+}
+button:hover { background:#2a3a66; }
+
+#infoPanel {
+  position:fixed; right:10px; top:10px;
+  background:#111; padding:10px;
+  border:1px solid #333;
+}
+</style>
 </head>
-<body><div id="leftPanel">
-<h2>MSIS Battlefield</h2><select id="sizeSelect">
-  <option value="20">20x20</option>
-  <option value="25">25x25</option>
-  <option value="30">30x30</option>
+
+<body>
+
+<div id="leftPanel">
+
+<h3>Mode</h3>
+<button onclick="setMode('unit')">Place Unit</button>
+<button onclick="setMode('terrain')">Place Terrain</button>
+<button onclick="setMode('structure')">Place Structure</button>
+<button onclick="setMode('select')">Select</button>
+
+<h3>Faction</h3>
+<select id="faction">
+<option value="red">Red</option>
+<option value="blue">Blue</option>
+<option value="yellow">Yellow</option>
+<option value="pink">Pink</option>
+<option value="purple">Purple</option>
+<option value="gold">Gold</option>
+<option value="orange">Orange</option>
+<option value="green">Green</option>
+<option value="brown">Brown</option>
 </select>
-<button onclick="generateGrid()">Generate Map</button><br><br> <input type="file" id="imgUpload"> <button onclick="enablePlacement()">Place Unit</button>
 
-<br><br> <label>Weapon Range:</label> <select id="rangeSelect">
+<h3>Terrain</h3>
+<button onclick="setTerrain('small')">Small (30HP)</button>
+<button onclick="setTerrain('medium')">Medium (50HP)</button>
+<button onclick="setTerrain('large')">Large (70HP)</button>
 
-  <option value="5">5 Tiles</option>
-  <option value="10">10 Tiles</option>
-  <option value="15">15 Tiles</option>
-  <option value="18">18 Tiles (Max)</option>
-</select><div id="infoPanel">
-  <h3>Unit Info</h3>
-  HP: <input type="number" id="hpInput" value="100"><br><br>
-  <button onclick="updateHP()">Update HP</button>
+<h3>Structures</h3>
+<button onclick="setStructure('tower',2,2,20)">Tower</button>
+<button onclick="setStructure('bunker',2,2,60)">Bunker</button>
+<button onclick="setStructure('hangar',3,3,30)">Hangar</button>
+<button onclick="setStructure('barracks',3,3,30)">Barracks</button>
+<button onclick="setStructure('hospital',3,3,40)">Hospital</button>
+<button onclick="setStructure('server',3,3,60)">Server</button>
+
 </div>
-</div><div id="grid"></div><script>
+
+<div id="grid"></div>
+
+<div id="infoPanel" style="display:none;">
+<div id="infoText"></div>
+HP: <input id="hpInput" type="number">
+<button onclick="updateHP()">Update</button>
+</div>
+
+<script>
+
 let gridSize = 20;
-let selectedUnit = null;
-let placingMode = false;
-let units = [];
-let movementRange = 5; // adjusted (2-inch system)
+let grid = document.getElementById("grid");
+grid.style.gridTemplateColumns = `repeat(${gridSize}, 32px)`;
 
-function generateGrid() {
-  gridSize = parseInt(document.getElementById("sizeSelect").value);
-  const grid = document.getElementById("grid");
-  grid.innerHTML = "";
-  grid.style.gridTemplateColumns = `repeat(${gridSize}, 30px)`;
+let mode = "select";
+let selected = null;
+let terrainType = null;
+let structureData = null;
 
-  for (let y=0; y<gridSize; y++) {
-    for (let x=0; x<gridSize; x++) {
-      const tile = document.createElement("div");
-      tile.classList.add("tile");
-      tile.dataset.x = x;
-      tile.dataset.y = y;
-      tile.onclick = () => handleTileClick(x,y,tile);
-      grid.appendChild(tile);
+let tiles = [];
+
+function setMode(m){ mode = m; selected = null; }
+
+function setTerrain(type){ terrainType = type; mode="terrain"; }
+
+function setStructure(name,w,h,hp){
+  structureData = {name,w,h,hp};
+  mode="structure";
+}
+
+for(let i=0;i<gridSize*gridSize;i++){
+  let tile = document.createElement("div");
+  tile.className = "tile";
+  tile.dataset.index = i;
+
+  tile.onclick = () => handleClick(tile);
+
+  grid.appendChild(tile);
+  tiles.push({element:tile, content:null});
+}
+
+function handleClick(tile){
+  let index = tile.dataset.index;
+
+  if(mode==="unit"){
+    placeUnit(tile);
+  }
+
+  if(mode==="terrain"){
+    placeTerrain(tile);
+  }
+
+  if(mode==="structure"){
+    placeStructure(tile);
+  }
+
+  if(mode==="select"){
+    selectObject(tile);
+  }
+}
+
+function placeUnit(tile){
+  if(tile.firstChild) return;
+
+  let unit = document.createElement("div");
+  unit.className = "unit";
+  unit.style.background = document.getElementById("faction").value;
+  unit.textContent = "U";
+  unit.dataset.hp = 100;
+
+  tile.appendChild(unit);
+}
+
+function placeTerrain(tile){
+  if(tile.firstChild) return;
+
+  let hp = terrainType==="small"?30:terrainType==="medium"?50:70;
+
+  let t = document.createElement("div");
+  t.className="terrain";
+  t.style.background="#555";
+  t.textContent="T";
+  t.dataset.hp=hp;
+
+  tile.appendChild(t);
+}
+
+function placeStructure(tile){
+  let {name,w,h,hp} = structureData;
+  let start = parseInt(tile.dataset.index);
+
+  let coords = getCoords(start);
+
+  for(let dx=0;dx<w;dx++){
+    for(let dy=0;dy<h;dy++){
+      let idx = getIndex(coords.x+dx, coords.y+dy);
+      if(idx===null || tiles[idx].element.firstChild) return;
+    }
+  }
+
+  for(let dx=0;dx<w;dx++){
+    for(let dy=0;dy<h;dy++){
+      let idx = getIndex(coords.x+dx, coords.y+dy);
+      let part = document.createElement("div");
+      part.className="structure";
+      part.style.background=document.getElementById("faction").value;
+      part.textContent=name[0].toUpperCase();
+      part.dataset.hp=hp;
+
+      tiles[idx].element.appendChild(part);
     }
   }
 }
 
-function enablePlacement(){ placingMode = true; }
+function selectObject(tile){
+  if(!tile.firstChild) return;
 
-function handleTileClick(x,y,tile) {
-  if (placingMode) {
-    placeUnit(x,y,tile);
-    placingMode = false;
-    return;
-  }
-
-  if (tile.firstChild) {
-    selectUnit(tile.firstChild, x, y);
-  } else if (selectedUnit) {
-    moveUnit(x,y,tile);
-  }
-}
-
-function placeUnit(x,y,tile) {
-  const file = document.getElementById("imgUpload").files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const unitDiv = document.createElement("div");
-    unitDiv.classList.add("unit");
-    unitDiv.style.backgroundImage = `url(${e.target.result})`;
-    tile.appendChild(unitDiv);
-
-    units.push({x,y,el:unitDiv,hp:100});
-  };
-  reader.readAsDataURL(file);
-}
-
-function selectUnit(unit,x,y){
-  selectedUnit = {unit,x,y};
-  highlightMovement(x,y);
-  loadHP();
-}
-
-function highlightMovement(x,y){
-  clearHighlights();
-  document.querySelectorAll('.tile').forEach(tile=>{
-    const tx = parseInt(tile.dataset.x);
-    const ty = parseInt(tile.dataset.y);
-    const dist = Math.abs(tx-x)+Math.abs(ty-y);
-    if(dist <= movementRange){
-      tile.classList.add('highlight');
-    }
-  });
-}
-
-function clearHighlights(){
-  document.querySelectorAll('.tile').forEach(t=>t.classList.remove('highlight'));
-}
-
-function moveUnit(x,y,tile){
-  clearHighlights();
-  tile.appendChild(selectedUnit.unit);
-  selectedUnit = null;
-}
-
-function loadHP(){
-  const unitData = units.find(u=>u.el === selectedUnit.unit);
-  if(unitData){
-    document.getElementById("hpInput").value = unitData.hp;
-  }
+  selected = tile.firstChild;
+  document.getElementById("infoPanel").style.display="block";
+  document.getElementById("infoText").innerText = selected.className;
+  document.getElementById("hpInput").value = selected.dataset.hp;
 }
 
 function updateHP(){
-  if(!selectedUnit) return;
-  const newHP = parseInt(document.getElementById("hpInput").value);
-  const unitData = units.find(u=>u.el === selectedUnit.unit);
-  if(unitData){
-    unitData.hp = newHP;
+  if(selected){
+    selected.dataset.hp = document.getElementById("hpInput").value;
   }
 }
 
-generateGrid();
+function getCoords(index){
+  return {x:index%gridSize, y:Math.floor(index/gridSize)};
+}
+
+function getIndex(x,y){
+  if(x<0||y<0||x>=gridSize||y>=gridSize) return null;
+  return y*gridSize+x;
+}
+
 </script>
+
 </body>
 </html>
