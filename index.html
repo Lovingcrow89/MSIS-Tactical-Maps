@@ -1,433 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>MSIS Tactical Maps</title>
-<style>
-body { margin:0; background:#0b0f1a; color:white; font-family:sans-serif; display:flex; }
+  <title>MSIS Tactical Maps</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0b0f1a;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+    }
 
-#leftPanel {
-  width:260px;
-  padding:10px;
-  background:#111;
-  overflow-y:auto;
-}
+    #leftPanel {
+      width: 250px;
+      padding: 10px;
+      background: #111827;
+    }
 
-#gridContainer {
-  position:relative;
-  margin:10px;
-}
+    button {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: #1f2a44;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
 
-#background {
-  position:absolute;
-  top:0;
-  left:0;
-  z-index:0;
-  opacity:0.4;
-}
-
-#grid {
-  display:grid;
-  position:relative;
-  z-index:1;
-}
-
-.tile {
-  width:32px; height:32px;
-  border:1px solid #1f2a44;
-  position:relative;
-}
-
-.tile:hover { background:#1a2440; }
-
-.unit img {
-  width:100%; height:100%;
-  object-fit:cover;
-}
-
-.unit {
-  border:2px solid white;
-}
-
-.structure, .terrain {
-  width:100%; height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:10px;
-}
-
-button, select, input {
-  width:100%;
-  margin:4px 0;
-  background:#1f2a44;
-  color:white;
-  border:none;
-  padding:6px;
-}
-
-#unitLibrary img {
-  width:40px;
-  height:40px;
-  margin:2px;
-  cursor:pointer;
-  border:2px solid transparent;
-}
-
-#unitLibrary img.selected {
-  border:2px solid white;
-}
-
-#infoPanel {
-  position:fixed;
-  right:10px;
-  top:10px;
-  background:#111;
-  padding:10px;
-  border:1px solid #333;
-}
-</style>
+    #gridContainer {
+      margin: 20px;
+    }
+  </style>
 </head>
-
 <body>
 
 <div id="leftPanel">
-
-<h3>Map</h3>
-<select id="mapSize">
-<option value="20">20x20</option>
-<option value="25">25x25</option>
-<option value="30">30x30</option>
-</select>
-<button onclick="generateGrid()">Generate Map</button>
-
-<h3>Background</h3>
-<input type="file" onchange="setBackground(event)">
-<button onclick="clearBackground()">Clear Background</button>
-
-<h3>Faction</h3>
-<input id="factionName" placeholder="Faction Name">
-<select id="factionColor">
-<option value="blue">Blue</option>
-<option value="yellow">Yellow</option>
-<option value="pink">Pink</option>
-<option value="purple">Purple</option>
-<option value="gold">Gold</option>
-<option value="orange">Orange</option>
-<option value="teal">Teal</option>
-<option value="crimson">Crimson</option>
-<option value="brown">Brown</option>
-</select>
-<button onclick="addFaction()">Add Faction</button>
-
-<select id="activeFaction"></select>
-
-<h3>Units</h3>
-<input type="file" multiple onchange="uploadUnit(event)">
-<div id="unitLibrary"></div>
-
-<h3>Mode</h3>
-<button onclick="setMode('unit')">Place Unit</button>
-<button onclick="setMode('terrain')">Terrain</button>
-<button onclick="setMode('structure')">Structure</button>
-<button onclick="setMode('select')">Select</button>
-<button onclick="setMode('attack')">Attack Mode</button>
-
-<h3>Terrain</h3>
-<button onclick="setTerrain(30)">Small</button>
-<button onclick="setTerrain(50)">Medium</button>
-<button onclick="setTerrain(70)">Large</button>
-
-<h3>Structures</h3>
-<button onclick="setStructure('Tower',2,2,20)">Tower</button>
-<button onclick="setStructure('Bunker',2,2,60)">Bunker</button>
-<button onclick="setStructure('Hangar',3,3,30)">Hangar</button>
-<button onclick="setStructure('Barracks',3,3,30)">Barracks</button>
-
+  <button onclick="generateGrid()">Generate Map</button>
 </div>
 
-<div id="weaponSection" style="display:none;">
-Weapon:
-<select id="weaponSelect"></select>
-<button onclick="attackTarget()">Attack</button>
-</div>
-<canvas id="background"></canvas>
 <div id="gridContainer"></div>
 
-<div id="infoPanel" style="display:none;">
-  <div id="infoText"></div>
-
-  <label>HP:</label>
-  <input id="hpInput" type="number">
-
-  <button onclick="updateHP()">Update</button>
-</div>
-
 <script>
-alert("JS is running");
-  
-let gridSize = 20;
- const weapons = {
-  "Beam Pistol": { dice:4, count:2, range:6 },
-  "Beam Rifle": { dice:6, count:1, range:12 },
-  "Sniper Rifle": { dice:10, count:1, range:20 },
-  "Gatling": { dice:8, count:4, range:12 }
-};
-let grid = document.getElementById("grid");
-let bgCanvas = document.getElementById("background");
-let ctx = bgCanvas.getContext("2d");
+function generateGrid() {
+  const grid = document.getElementById("gridContainer");
 
-let mode="select";
-let selected=null;
-let terrainHP=30;
-let structureData=null;
-let unitImages=[];
-let selectedUnit=null;
-let factions=[];
+  const rows = 20;
+  const cols = 20;
+  const size = 30;
 
-function generateGrid(){
-  grid.innerHTML="";
-  gridSize=parseInt(document.getElementById("mapSize").value);
-  grid.style.gridTemplateColumns=`repeat(${gridSize},32px)`;
+  grid.innerHTML = "";
+  grid.style.display = "grid";
+  grid.style.gridTemplateColumns = `repeat(${cols}, ${size}px)`;
 
-  bgCanvas.width=gridSize*32;
-  bgCanvas.height=gridSize*32;
+  for (let i = 0; i < rows * cols; i++) {
+    const tile = document.createElement("div");
+    tile.style.width = size + "px";
+    tile.style.height = size + "px";
+    tile.style.border = "1px solid #1e3a5f";
 
-  for(let i=0;i<gridSize*gridSize;i++){
-    let tile=document.createElement("div");
-    tile.className="tile";
-    tile.onclick=()=>handleClick(tile,i);
     grid.appendChild(tile);
   }
 }
-
-generateGrid();
-
-function setMode(m){ mode=m; selected=null; }
-
-function uploadUnit(e){
-  let files = e.target.files;
-
-  for(let i=0; i<files.length; i++){
-    let file = files[i];
-    let url = URL.createObjectURL(file);
-
-    unitImages.push(url);
-
-    let img = document.createElement("img");
-    img.src = url;
-
-    img.onclick = () => {
-      selectedUnit = url;
-      document.querySelectorAll("#unitLibrary img")
-        .forEach(i => i.classList.remove("selected"));
-      img.classList.add("selected");
-    };
-
-    document.getElementById("unitLibrary").appendChild(img);
-  }
-}
-function addFaction(){
-  let name=document.getElementById("factionName").value;
-  let color=document.getElementById("factionColor").value;
-
-  factions.push({name,color});
-
-  let opt=document.createElement("option");
-  opt.value=factions.length-1;
-  opt.textContent=name;
-  document.getElementById("activeFaction").appendChild(opt);
-}
-
-function getFaction(){
-  let idx=document.getElementById("activeFaction").value;
-  return factions[idx];
-}
-
-function handleClick(tile){
-  if(mode==="unit") placeUnit(tile);
-  else if(mode==="terrain") placeTerrain(tile);
-  else if(mode==="structure") placeStructure(tile);
-  else if(mode==="select") selectObj(tile);
-  else if(mode==="attack") resolveAttack(tile);
-}
-
-function placeUnit(tile){
-  if(!selectedUnit || tile.firstChild) return;
-
-  let f=getFaction();
-  if(!f) return;
-
-  let div=document.createElement("div");
-  div.className="unit";
-  div.style.border=`2px solid ${f.color}`;
-  div.dataset.hp=100;
-  div.dataset.faction=f.name;
-  div.dataset.weapons = JSON.stringify([
-  "Beam Pistol",
-  "Beam Rifle"
-]);
-
-  let img=document.createElement("img");
-  img.src=selectedUnit;
-
-  div.appendChild(img);
-  tile.appendChild(div);
-}
-
-function placeTerrain(tile){
-  if(tile.firstChild) return;
-
-  let t=document.createElement("div");
-  t.className="terrain";
-  t.style.background="#555";
-  t.textContent="T";
-  t.dataset.hp=terrainHP;
-
-  tile.appendChild(t);
-}
-
-function setTerrain(hp){ terrainHP=hp; mode="terrain"; }
-
-function setStructure(name,w,h,hp){
-  structureData={name,w,h,hp};
-  mode="structure";
-}
-
-function placeStructure(tile){
-  let index=[...grid.children].indexOf(tile);
-  let x=index%gridSize;
-  let y=Math.floor(index/gridSize);
-
-  for(let dx=0;dx<structureData.w;dx++){
-    for(let dy=0;dy<structureData.h;dy++){
-      let nx=x+dx, ny=y+dy;
-      if(nx>=gridSize||ny>=gridSize) return;
-      let t=grid.children[ny*gridSize+nx];
-      if(t.firstChild) return;
-    }
-  }
-
-  let f=getFaction();
-  if(!f) return;
-
-  for(let dx=0;dx<structureData.w;dx++){
-    for(let dy=0;dy<structureData.h;dy++){
-      let t=grid.children[(y+dy)*gridSize+(x+dx)];
-      let s=document.createElement("div");
-      s.className="structure";
-      s.style.background=f.color;
-      s.textContent=structureData.name[0];
-      s.dataset.hp=structureData.hp;
-      s.dataset.faction=f.name;
-      t.appendChild(s);
-    }
-  }
-}
-
-function selectObj(tile){
-  if(!tile.firstChild) return;
-  selected = tile.firstChild;
-
-  document.getElementById("infoPanel").style.display="block";
-  document.getElementById("infoText").innerText =
-    selected.className + " | " + (selected.dataset.faction || "");
-
-  document.getElementById("hpInput").value = selected.dataset.hp;
-
-  let weaponSection = document.getElementById("weaponSection");
-  let weaponSelect = document.getElementById("weaponSelect");
-
-  if(selected.className === "unit"){
-    weaponSection.style.display = "block";
-    weaponSelect.innerHTML = "";
-
-    let unitWeapons = JSON.parse(selected.dataset.weapons);
-
-    unitWeapons.forEach(w => {
-      let opt = document.createElement("option");
-      opt.value = w;
-      opt.textContent = w;
-      weaponSelect.appendChild(opt);
-    });
-
-  } else {
-    weaponSection.style.display = "none";
-  }
-}
-
-function setBackground(e){
-  let file=e.target.files[0];
-  let img=new Image();
-  img.onload=()=>ctx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
-  img.src=URL.createObjectURL(file);
-}
-
-function clearBackground(){
-  ctx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-}
-
-let attacker = null;
-
-function attackTarget(){
-  if(!selected) return;
-  attacker = selected;
-  mode = "attack";
-}
-
-function getTileIndex(el){
-  return [...grid.children].indexOf(el.parentElement);
-}
-
-function getDistance(a, b){
-  let ax = a % gridSize;
-  let ay = Math.floor(a / gridSize);
-  let bx = b % gridSize;
-  let by = Math.floor(b / gridSize);
-
-  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
-}
-
-function resolveAttack(tile){
-  if(!attacker || !tile.firstChild) return;
-
-  let target = tile.firstChild;
-
-  let weaponName = document.getElementById("weaponSelect").value;
-  let weapon = weapons[weaponName];
-
-  let attackerTileIndex = getTileIndex(attacker);
-  let targetTileIndex = [...grid.children].indexOf(tile);
-
-  let distance = getDistance(attackerTileIndex, targetTileIndex);
-
-  if(distance > weapon.range){
-    alert("Out of range!");
-    return;
-  }
-
-  let totalDamage = 0;
-
-  for(let i=0; i<weapon.count; i++){
-    let roll = Math.ceil(Math.random() * weapon.dice);
-
-    let threshold = Math.max(1, Math.floor(weapon.dice / 2) - 1);
-
-    if(roll >= threshold){
-      totalDamage += roll;
-    }
-  }
-
-  target.dataset.hp -= totalDamage;
-
-  if(target.dataset.hp <= 0){
-    tile.innerHTML = "";
-  }
-
-  mode = "select";
-  attacker = null;
-}
-
-
 </script>
 
 </body>
