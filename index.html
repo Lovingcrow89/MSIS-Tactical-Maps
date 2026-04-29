@@ -35,6 +35,17 @@
 <body>
 
 <div id="leftPanel">
+
+  <button onclick="setMode('unit')">Unit</button>
+  <button onclick="setMode('terrain')">Terrain</button>
+  <button onclick="setMode('structure')">Structure</button>
+  <button onclick="setMode('select')">Select</button>
+
+  <button onclick="generateGrid()">Generate Map</button>
+
+</div>
+  
+<div id="leftPanel">
   <button onclick="generateGrid()">Generate Map</button>
 </div>
 
@@ -61,7 +72,15 @@ function generateGrid() {
     grid.appendChild(tile);
   }
 }
-</script>
 
+let mode = "unit";
+
+function setMode(newMode) {
+  mode = newMode;
+  console.log("Mode:", mode);
+}
+  
+</script>
+  
 </body>
 </html>
