@@ -242,11 +242,11 @@ function getFaction(){
 }
 
 function handleClick(tile){
-  if(mode==="unit") placeUnit(tile);
-  else if(mode==="terrain") placeTerrain(tile);
-  else if(mode==="structure") placeStructure(tile);
-  else if(mode==="select") selectObj(tile);
-  else if(mode==="attack") resolveAttack(tile);
+  if(mode === "unit") placeUnit(tile);
+  else if(mode === "terrain") placeTerrain(tile);
+  else if(mode === "structure") placeStructure(tile);
+  else if(mode === "select") selectObj(tile);
+  else if(mode === "attack") resolveAttack(tile);
 }
 
 function placeUnit(tile){
