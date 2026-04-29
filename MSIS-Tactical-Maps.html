@@ -1,0 +1,151 @@
+<!DOCTYPE html><html>
+<head>
+  <title>MSIS Tactical Map v3</title>
+  <style>
+    body { background:#0b0f1a; color:white; font-family:sans-serif; display:flex; }
+    #leftPanel { margin:10px; }
+    #grid { display:grid; margin:20px; }
+    .tile {
+      width:30px; height:30px;
+      border:1px solid #1f2a44;
+      position:relative;
+    }
+    .tile:hover { background:#1a2440; }
+    .unit {
+      width:100%; height:100%;
+      background-size:cover;
+      cursor:pointer;
+    }
+    .highlight { background:rgba(0,255,255,0.2); }
+    #infoPanel {
+      margin-top:20px;
+      padding:10px;
+      border:1px solid #1f2a44;
+      width:200px;
+    }
+  </style>
+</head>
+<body><div id="leftPanel">
+<h2>MSIS Battlefield</h2><select id="sizeSelect">
+  <option value="20">20x20</option>
+  <option value="25">25x25</option>
+  <option value="30">30x30</option>
+</select>
+<button onclick="generateGrid()">Generate Map</button><br><br> <input type="file" id="imgUpload"> <button onclick="enablePlacement()">Place Unit</button>
+
+<br><br> <label>Weapon Range:</label> <select id="rangeSelect">
+
+  <option value="5">5 Tiles</option>
+  <option value="10">10 Tiles</option>
+  <option value="15">15 Tiles</option>
+  <option value="18">18 Tiles (Max)</option>
+</select><div id="infoPanel">
+  <h3>Unit Info</h3>
+  HP: <input type="number" id="hpInput" value="100"><br><br>
+  <button onclick="updateHP()">Update HP</button>
+</div>
+</div><div id="grid"></div><script>
+let gridSize = 20;
+let selectedUnit = null;
+let placingMode = false;
+let units = [];
+let movementRange = 5; // adjusted (2-inch system)
+
+function generateGrid() {
+  gridSize = parseInt(document.getElementById("sizeSelect").value);
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  grid.style.gridTemplateColumns = `repeat(${gridSize}, 30px)`;
+
+  for (let y=0; y<gridSize; y++) {
+    for (let x=0; x<gridSize; x++) {
+      const tile = document.createElement("div");
+      tile.classList.add("tile");
+      tile.dataset.x = x;
+      tile.dataset.y = y;
+      tile.onclick = () => handleTileClick(x,y,tile);
+      grid.appendChild(tile);
+    }
+  }
+}
+
+function enablePlacement(){ placingMode = true; }
+
+function handleTileClick(x,y,tile) {
+  if (placingMode) {
+    placeUnit(x,y,tile);
+    placingMode = false;
+    return;
+  }
+
+  if (tile.firstChild) {
+    selectUnit(tile.firstChild, x, y);
+  } else if (selectedUnit) {
+    moveUnit(x,y,tile);
+  }
+}
+
+function placeUnit(x,y,tile) {
+  const file = document.getElementById("imgUpload").files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const unitDiv = document.createElement("div");
+    unitDiv.classList.add("unit");
+    unitDiv.style.backgroundImage = `url(${e.target.result})`;
+    tile.appendChild(unitDiv);
+
+    units.push({x,y,el:unitDiv,hp:100});
+  };
+  reader.readAsDataURL(file);
+}
+
+function selectUnit(unit,x,y){
+  selectedUnit = {unit,x,y};
+  highlightMovement(x,y);
+  loadHP();
+}
+
+function highlightMovement(x,y){
+  clearHighlights();
+  document.querySelectorAll('.tile').forEach(tile=>{
+    const tx = parseInt(tile.dataset.x);
+    const ty = parseInt(tile.dataset.y);
+    const dist = Math.abs(tx-x)+Math.abs(ty-y);
+    if(dist <= movementRange){
+      tile.classList.add('highlight');
+    }
+  });
+}
+
+function clearHighlights(){
+  document.querySelectorAll('.tile').forEach(t=>t.classList.remove('highlight'));
+}
+
+function moveUnit(x,y,tile){
+  clearHighlights();
+  tile.appendChild(selectedUnit.unit);
+  selectedUnit = null;
+}
+
+function loadHP(){
+  const unitData = units.find(u=>u.el === selectedUnit.unit);
+  if(unitData){
+    document.getElementById("hpInput").value = unitData.hp;
+  }
+}
+
+function updateHP(){
+  if(!selectedUnit) return;
+  const newHP = parseInt(document.getElementById("hpInput").value);
+  const unitData = units.find(u=>u.el === selectedUnit.unit);
+  if(unitData){
+    unitData.hp = newHP;
+  }
+}
+
+generateGrid();
+</script>
+</body>
+</html>
