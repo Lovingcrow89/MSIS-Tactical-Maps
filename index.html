@@ -130,6 +130,7 @@ button, select, input {
 <button onclick="setMode('terrain')">Terrain</button>
 <button onclick="setMode('structure')">Structure</button>
 <button onclick="setMode('select')">Select</button>
+<button onclick="setMode('attack')">Attack Mode</button>
 
 <h3>Terrain</h3>
 <button onclick="setTerrain(30)">Small</button>
@@ -144,6 +145,11 @@ button, select, input {
 
 </div>
 
+<div id="weaponSection" style="display:none;">
+Weapon:
+<select id="weaponSelect"></select>
+<button onclick="attackTarget()">Attack</button>
+</div>
 <div id="gridContainer">
 <canvas id="background"></canvas>
 <div id="grid"></div>
@@ -158,6 +164,12 @@ HP: <input id="hpInput" type="number">
 <script>
 
 let gridSize = 20;
+ const weapons = {
+  "Beam Pistol": { dice:4, count:2, range:6 },
+  "Beam Rifle": { dice:6, count:1, range:12 },
+  "Sniper Rifle": { dice:10, count:1, range:20 },
+  "Gatling": { dice:8, count:4, range:12 }
+};
 let grid = document.getElementById("grid");
 let bgCanvas = document.getElementById("background");
 let ctx = bgCanvas.getContext("2d");
@@ -212,7 +224,6 @@ function uploadUnit(e){
     document.getElementById("unitLibrary").appendChild(img);
   }
 }
-
 function addFaction(){
   let name=document.getElementById("factionName").value;
   let color=document.getElementById("factionColor").value;
@@ -232,9 +243,10 @@ function getFaction(){
 
 function handleClick(tile){
   if(mode==="unit") placeUnit(tile);
-  if(mode==="terrain") placeTerrain(tile);
-  if(mode==="structure") placeStructure(tile);
-  if(mode==="select") selectObj(tile);
+  else if(mode==="terrain") placeTerrain(tile);
+  else if(mode==="structure") placeStructure(tile);
+  else if(mode==="select") selectObj(tile);
+  else if(mode==="attack") resolveAttack(tile);
 }
 
 function placeUnit(tile){
@@ -248,6 +260,10 @@ function placeUnit(tile){
   div.style.border=`2px solid ${f.color}`;
   div.dataset.hp=100;
   div.dataset.faction=f.name;
+  div.dataset.weapons = JSON.stringify([
+  "Beam Pistol",
+  "Beam Rifle"
+]);
 
   let img=document.createElement("img");
   img.src=selectedUnit;
@@ -308,18 +324,32 @@ function placeStructure(tile){
 
 function selectObj(tile){
   if(!tile.firstChild) return;
-  selected=tile.firstChild;
+  selected = tile.firstChild;
 
   document.getElementById("infoPanel").style.display="block";
   document.getElementById("infoText").innerText =
     selected.className + " | " + (selected.dataset.faction || "");
 
-  document.getElementById("hpInput").value=selected.dataset.hp;
-}
+  document.getElementById("hpInput").value = selected.dataset.hp;
 
-function updateHP(){
-  if(selected){
-    selected.dataset.hp=document.getElementById("hpInput").value;
+  let weaponSection = document.getElementById("weaponSection");
+  let weaponSelect = document.getElementById("weaponSelect");
+
+  if(selected.className === "unit"){
+    weaponSection.style.display = "block";
+    weaponSelect.innerHTML = "";
+
+    let unitWeapons = JSON.parse(selected.dataset.weapons);
+
+    unitWeapons.forEach(w => {
+      let opt = document.createElement("option");
+      opt.value = w;
+      opt.textContent = w;
+      weaponSelect.appendChild(opt);
+    });
+
+  } else {
+    weaponSection.style.display = "none";
   }
 }
 
@@ -333,6 +363,68 @@ function setBackground(e){
 function clearBackground(){
   ctx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
 }
+
+let attacker = null;
+
+function attackTarget(){
+  if(!selected) return;
+  attacker = selected;
+  mode = "attack";
+}
+
+function getTileIndex(el){
+  return [...grid.children].indexOf(el.parentElement);
+}
+
+function getDistance(a, b){
+  let ax = a % gridSize;
+  let ay = Math.floor(a / gridSize);
+  let bx = b % gridSize;
+  let by = Math.floor(b / gridSize);
+
+  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
+}
+
+function resolveAttack(tile){
+  if(!attacker || !tile.firstChild) return;
+
+  let target = tile.firstChild;
+
+  let weaponName = document.getElementById("weaponSelect").value;
+  let weapon = weapons[weaponName];
+
+  let attackerTileIndex = getTileIndex(attacker);
+  let targetTileIndex = [...grid.children].indexOf(tile);
+
+  let distance = getDistance(attackerTileIndex, targetTileIndex);
+
+  if(distance > weapon.range){
+    alert("Out of range!");
+    return;
+  }
+
+  let totalDamage = 0;
+
+  for(let i=0; i<weapon.count; i++){
+    let roll = Math.ceil(Math.random() * weapon.dice);
+
+    let threshold = Math.max(1, Math.floor(weapon.dice / 2) - 1);
+
+    if(roll >= threshold){
+      totalDamage += roll;
+    }
+  }
+
+  target.dataset.hp -= totalDamage;
+
+  if(target.dataset.hp <= 0){
+    tile.innerHTML = "";
+  }
+
+  mode = "select";
+  attacker = null;
+}
+
 
 </script>
 
