@@ -95,7 +95,17 @@ function generateGrid() {
 }
 
 let mode = "unit";
+  
+let uploadedUnit = null;
 
+document.getElementById("unitUpload").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        uploadedUnit = URL.createObjectURL(file);
+        console.log("image loaded");
+    }
+});
+  
 function setMode(newMode) {
   mode = newMode;
   console.log("Mode:", mode);
