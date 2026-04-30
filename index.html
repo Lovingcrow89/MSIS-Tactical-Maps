@@ -72,9 +72,9 @@ function generateGrid() {
 
   tile.onclick = function () {
 
-    if (mode === "unit") {
-    tile.innerHTML = "<img src='YOUR_IMAGE.png' width='100%' height='100%'>";
- }
+   if (mode === "unit" && uploadedUnit) {
+    tile.innerHTML = "<img src='" + uploadedUnit + "' style='width:100%; height:100%; object-fit:contain;'>";
+}
 
     else if (mode === "terrain") {
       tile.style.background = "green";
